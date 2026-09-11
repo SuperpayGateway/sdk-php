@@ -45,6 +45,13 @@
     $balanceResult = gatewaySdk::balance();
     echo $balanceResult;
 
+    // Get active pay-in and payout codes configured for this merchant
+    $payinPaymentCodes = gatewaySdk::getPayinPaymentCodes();
+    print_r($payinPaymentCodes);
+
+    $payoutPaymentCodes = gatewaySdk::getPayoutPaymentCodes();
+    print_r($payoutPaymentCodes);
+
     // Decrypt the encrypted information in the callback
     $jsonstr = gatewaySdk::symDecrypt("encryptedData .........");
     echo $jsonstr;

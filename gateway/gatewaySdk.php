@@ -201,6 +201,69 @@ class gatewaySdk
         }
     }
 
+    /**
+     * Get active pay-in payment codes available to the merchant.
+     * @return array [code,message,data]
+     */
+    public static function getPayinPaymentCodes()
+    {
+        return self::getPaymentCodes('getPayinPaymentCodes');
+    }
+
+    /**
+     * Get active payout payment codes available to the merchant.
+     * @return array [code,message,data]
+     */
+    public static function getPayoutPaymentCodes()
+    {
+        return self::getPaymentCodes('getPayoutPaymentCodes');
+    }
+
+    private static function getPaymentCodes($endpoint)
+    {
+        $result = array();
+        try {
+            $token = self::getToken();
+            if (self::isnull($token)) {
+                return ['code' => '0', 'message' => 'token is null', 'data' => []];
+            }
+
+            $requestUrl = "gateway/" . gatewayCfg::$VERSION_NO . "/" . $endpoint;
+            $cnst = self::generateConstant($requestUrl);
+            $bodyJson = "{}";
+            $base64ReqBody = self::sortedAfterToBased64($bodyJson);
+            $signature = self::createSignature($cnst, $base64ReqBody);
+            $encryptData = self::symEncrypt($base64ReqBody);
+            $dict = self::post(
+                $requestUrl,
+                $token,
+                $signature,
+                ["data" => $encryptData],
+                $cnst["nonceStr"],
+                $cnst["timestamp"]
+            );
+
+            if (!self::isnull($dict["code"]) && strval($dict["code"]) === "1" && !self::isnull($dict["encryptedData"])) {
+                $decryptedData = self::symDecrypt($dict["encryptedData"]);
+                $decoded = json_decode($decryptedData, true);
+                return is_array($decoded)
+                    ? $decoded
+                    : ['code' => '0', 'message' => 'Invalid payment code response', 'data' => []];
+            }
+
+            return [
+                'code' => '0',
+                'message' => $dict['message'] ?? 'Payment code request failed',
+                'data' => [],
+            ];
+        } catch (Exception $e) {
+            $result["code"] = "0";
+            $result["message"] = $e->getMessage();
+            $result["data"] = [];
+            return $result;
+        }
+    }
+
     /** get server token
      * @return string
      */
